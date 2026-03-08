@@ -1,0 +1,98 @@
+version: '3.9'
+
+services:
+
+  db:
+    build: ./db
+    container_name: mms-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-mms_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      POSTGRES_DB: ${DB_NAME:-mms}
+      PGDATA: /var/lib/postgresql/18/docker
+    ports:
+      - "6543:5432"
+    volumes:
+      - mms_db_data:/var/lib/postgresql/18/docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mms_admin} -d ${DB_NAME:-mms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  db-init:
+    image: apache/age
+    container_name: mms-db-init
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+    volumes:
+      - ./db/init:/init
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        echo 'Running database init script...' &&
+        psql -h db -U ${DB_USER:-mms_admin} -d ${DB_NAME:-mms} -f /init/01_setup.sql &&
+        echo 'Database initialisation complete.'
+      "
+    restart: "no"
+
+  api:
+    build: ./api
+    container_name: mms-api
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-mms_admin}:${DB_PASSWORD}@db:5432/${DB_NAME:-mms}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      PORT: 3000
+      NODE_ENV: ${NODE_ENV:-production}
+    ports:
+      - "${API_PORT:-3001}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    volumes:
+      - mms_uploads:/app/uploads
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 128m
+    restart: unless-stopped
+
+      #ifc-service:
+      #build: ./ifc-service
+      #container_name: mms-ifc
+      #environment:
+      #DATABASE_URL: postgresql://${DB_USER:-mms_admin}:${DB_PASSWORD}@db:5432/${DB_NAME:-mms}
+      #PORT: ${IFC_PORT:-8000}
+      #ports:
+      #- "${IFC_PORT:-8000}:8000"
+      #depends_on:
+      #db:
+      #condition: service_healthy
+      #volumes:
+      #- mms_ifc_uploads:/app/uploads
+      #restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      args:
+        # Passed to Vite at build time — browser calls this URL directly
+        VITE_API_URL: ${API_URL:-http://localhost:3001}
+    container_name: mms-web
+    ports:
+      - "${WEB_PORT:-8888}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  mms_db_data:
+  mms_uploads:
+  mms_ifc_uploads:

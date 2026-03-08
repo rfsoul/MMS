@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "MMS Field",
+    "slug": "mms-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d0d0f"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d0d0f"
+      },
+      "package": "com.acme.mms",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "ACCESS_MEDIA_LOCATION",
+        "ACCESS_NETWORK_STATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "FOREGROUND_SERVICE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-background-fetch",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        { "cameraPermission": "Allow MMS to access camera for checklist photo items." }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow MMS to access camera for checklist photo items.",
+          "photosPermission": "Allow MMS to access your photos for attaching to work orders."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow MMS to access your photo library.",
+          "savePhotosPermission": "Allow MMS to save photos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
+    ],
+    "scheme": "mms",
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
+  }
+}
