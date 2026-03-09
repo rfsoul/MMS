@@ -5,6 +5,17 @@ Offline-first, targets rugged Android tablets, distributed via Google Play Inter
 
 ---
 
+
+## Repository Layout (Canonical Paths)
+
+- `api/` — Node.js/Express API
+- `web/` — Canonical React + Vite web application
+- `mms-mobile/` — Expo/React Native mobile app
+
+> Note: `web/` is the single source of truth for the web client.
+
+---
+
 ## Architecture
 
 ```
@@ -26,6 +37,21 @@ src/
     config.ts               API_URL env var, sync constants
     types.ts                TypeScript types mirroring API schema
     format.ts               Formatting utilities
+```
+
+---
+
+## Safety Testing Pipeline
+
+A CI workflow runs `scripts/safety-check.sh` on pull requests and key branches. It currently checks:
+
+- `web/web` duplicate tree is not present
+- no tracked files remain under `web/web`
+- canonical web app (`web/`) installs and builds successfully
+
+Run locally:
+```bash
+./scripts/safety-check.sh
 ```
 
 ---
