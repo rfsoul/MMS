@@ -1,268 +1,50 @@
-# DATABASE_CONTRACT.md
-
-This document defines the **Database Contract** for the MMS system.
-
-The database contract is the **foundation of the architecture**.\
-It defines what responsibilities belong to the database versus the API
-layer.
-
-All AI coding agents and developers must follow this contract when
-writing code.
-
-The goals are:
-
--   protect multi-tenant isolation
--   enforce domain integrity
--   prevent application bugs from corrupting data
--   maintain predictable system behavior
-
-------------------------------------------------------------------------
-
-# 1. Architectural Philosophy
-
-The MMS database is **not a passive data store**.
-
-It actively enforces:
-
--   domain rules
--   lifecycle constraints
--   data integrity
--   tenant isolation boundaries
-
-The application layer **must respect these guarantees**.
-
-Responsibility split:
-
-Application Layer: - orchestration - user permissions - request
-validation - workflow logic
-
-Database Layer: - relational integrity - lifecycle enforcement -
-measurement storage - graph topology - trigger-based automation
-
-------------------------------------------------------------------------
-
-# 2. Multi‑Tenant Isolation
-
-Every operational table must include:
-
-company_id
-
-The API must always enforce:
-
-WHERE company_id = requesting_user.company_id
-
-Exception:
-
-help_desk_agent role may operate across companies.
-
-Agents must **never write queries that omit company_id filters** unless
-explicitly justified.
-
-------------------------------------------------------------------------
-
-# 3. Graph / Relational Boundary
-
-Physical infrastructure lives in the **Apache AGE graph**.
-
-Graph node hierarchy:
-
-Site Building Floor Space System Asset Component
-
-Relational tables must **never duplicate asset hierarchy data**.
-
-Instead they reference graph nodes using:
-
-asset_graph_id
-
-Example:
-
-work_orders.asset_graph_id
-
-------------------------------------------------------------------------
-
-# 4. Ownership of Domain Rules
-
-The database owns enforcement of the following rules.
-
-Issue lifecycle timestamps
-
-Checklist completion validation
-
-Automatic closing of issues when all work orders complete
-
-Measurement range validation
-
-Graph measurement insertion
-
-Triggers must enforce these rules regardless of API behavior.
-
-The API must not bypass triggers.
-
-------------------------------------------------------------------------
-
-# 5. Triggers and Context
-
-Certain triggers depend on knowing the acting user.
-
-The API must set session context before executing writes:
-
-SELECT set_config('app.current_user_id', \$1, false)
-
-Triggers may read:
-
-current_setting('app.current_user_id')
-
-This enables audit trails and lifecycle logic.
-
-------------------------------------------------------------------------
-
-# 6. Work Order Data Ownership
-
-The work_orders table is the authoritative source of maintenance tasks.
-
-Associated tables:
-
-work_order_tasks work_order_updates work_order_photos work_order_parts
-
-Deletion rules:
-
-Work orders should rarely be deleted.
-
-Soft deletion or status transitions should be used instead.
-
-------------------------------------------------------------------------
-
-# 7. Checklist Data Ownership
-
-Checklist templates are immutable once assigned.
-
-Checklist data flow:
-
-Template → Assigned Checklist → Checklist Responses
-
-Assigned checklist items must be copied into work-order scope tables.
-
-Template edits must **never modify existing work order records**.
-
-------------------------------------------------------------------------
-
-# 8. Measurement Data Contract
-
-All engineering measurements originate from checklist responses.
-
-Measurement flow:
-
-Checklist Response ↓ Validated Measurement ↓ Graph Measurement Node
-
-The graph becomes the authoritative **historical engineering record**.
-
-Measurement nodes should contain:
-
-asset_graph_id timestamp measurement_type value unit
-
-------------------------------------------------------------------------
-
-# 9. Inventory Data Contract
-
-Inventory tracks parts used in maintenance.
-
-Core tables:
-
-parts inventory work_order_parts
-
-Rules:
-
-Parts represent component types.
-
-Inventory tracks stock quantities.
-
-WorkOrderParts records consumption.
-
-Work order completion may trigger inventory deduction.
-
-------------------------------------------------------------------------
-
-# 10. Asset Request Contract
-
-Technicians may submit asset creation requests.
-
-Table:
-
-asset_requests
-
-Lifecycle:
-
-draft → submitted → under_review → approved → rejected
-
-Approval creates a graph node and records:
-
-resolved_asset_graph_id
-
-This ensures traceability between request and asset creation.
-
-------------------------------------------------------------------------
-
-# 11. Preventive Maintenance Contract
-
-PM schedules generate work orders automatically.
-
-Tables:
-
-pm_schedules pm_generated_work_orders
-
-Rules:
-
-The scheduler must not create duplicate work orders.
-
-Work orders generated by PM must be traceable to their schedule.
-
-------------------------------------------------------------------------
-
-# 12. Soft Delete Policy
-
-Operational tables should avoid hard deletion.
-
-Preferred pattern:
-
-status flags or archived_at timestamps.
-
-Historical maintenance records must be preserved.
-
-------------------------------------------------------------------------
-
-# 13. Query Safety Rules
-
-All database queries must follow these rules:
-
-Always parameterize SQL.
-
-Never interpolate variables.
-
-Always enforce company_id filtering.
-
-Never bypass trigger logic.
-
-------------------------------------------------------------------------
-
-# 14. Schema Evolution Rules
-
-Schema changes must:
-
--   update seed scripts
--   update migration scripts
--   update test harness
-
-Changes affecting triggers must be documented in pull requests.
-
-------------------------------------------------------------------------
-
-# 15. Contract Stability
-
-The database contract should change **rarely and deliberately**.
-
-Application code may evolve frequently.
-
-The database must remain the stable backbone of the system.
-
-Breaking the contract risks corrupting maintenance data and system
-workflows.
+# Database Contract
+
+## telemetry_values (hypertable)
+Raw incoming telemetry stream.
+
+| column | type | notes |
+|---|---|---|
+| id | BIGSERIAL PK | surrogate key |
+| ts | TIMESTAMPTZ NOT NULL | event time, hypertable time column |
+| asset_id | TEXT NOT NULL | asset reference |
+| measurement_type | TEXT NOT NULL | e.g. `temperature_c` |
+| value | DOUBLE PRECISION NOT NULL | numeric value |
+| unit | TEXT NOT NULL | canonical unit |
+
+Indexes:
+- `(asset_id, measurement_type, ts DESC)`
+
+## analytics_baselines
+Rolling baseline statistics per signal.
+
+| column | type | notes |
+|---|---|---|
+| asset_id | TEXT |
+| measurement_type | TEXT |
+| window_start | TIMESTAMPTZ |
+| window_end | TIMESTAMPTZ |
+| mean_value | DOUBLE PRECISION |
+| stddev_value | DOUBLE PRECISION |
+| sample_count | INTEGER |
+| updated_at | TIMESTAMPTZ |
+
+PK: `(asset_id, measurement_type)`
+
+## analytics_alerts
+Anomaly events generated by analytics engine.
+
+| column | type | notes |
+|---|---|---|
+| id | BIGSERIAL PK |
+| created_at | TIMESTAMPTZ |
+| ts | TIMESTAMPTZ | source telemetry timestamp |
+| asset_id | TEXT |
+| measurement_type | TEXT |
+| value | DOUBLE PRECISION |
+| baseline_mean | DOUBLE PRECISION |
+| baseline_stddev | DOUBLE PRECISION |
+| z_score | DOUBLE PRECISION |
+| severity | TEXT | `info|warning|critical` |
+| message | TEXT |
+| resolved | BOOLEAN |
