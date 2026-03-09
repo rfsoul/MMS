@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "7654:5432"
     volumes:
       - analytics_db_data:/var/lib/postgresql/data
       - ./analytics/timescaledb/init:/docker-entrypoint-initdb.d
@@ -41,7 +41,7 @@ services:
       analytics-engine:
         condition: service_started
     ports:
-      - "8080:8080"
+      - "7777:7777"
     restart: unless-stopped
 
 volumes:

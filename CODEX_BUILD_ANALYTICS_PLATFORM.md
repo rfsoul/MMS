@@ -32,7 +32,7 @@ ANALYTICS_ENGINE_ARCHITECTURE.md
 docker compose up --build
 ```
 
-Portal URL: `http://localhost:8080`
+Portal URL: `http://localhost:7777`
 
 ## Pipeline behavior
 
