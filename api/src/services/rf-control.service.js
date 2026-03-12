@@ -9,6 +9,7 @@ const RF_COMMANDS = Object.freeze({
   CHANNEL: 'CHANNEL',
   POWER: 'POWER',
   ANTENNA: 'ANTENNA',
+  STOP: 'STOP',
 });
 
 const CHANNEL_MIN = 0;
@@ -109,6 +110,15 @@ function setAntenna(rawAntenna) {
   };
 }
 
+function stopRf() {
+  return {
+    commandType: RF_COMMANDS.STOP,
+    action: 'off',
+    command: buildRfCommand(RF_COMMANDS.STOP, 'off'),
+    safeCommand: buildRfCommand(RF_COMMANDS.POWER, POWER_MIN),
+  };
+}
+
 module.exports = {
   RF_COMMANDS,
   CHANNEL_MIN,
@@ -124,4 +134,5 @@ module.exports = {
   setChannel,
   setPower,
   setAntenna,
+  stopRf,
 };
