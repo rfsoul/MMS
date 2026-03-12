@@ -9,6 +9,7 @@ const {
   setPower,
   parseAntennaValue,
   setAntenna,
+  stopRf,
   RF_COMMANDS,
 } = require('./rf-control.service');
 
@@ -16,6 +17,17 @@ test('buildRfCommand uses command abstraction consistently', () => {
   assert.equal(buildRfCommand(RF_COMMANDS.CHANNEL, 42), 'CHANNEL:42');
   assert.equal(buildRfCommand(RF_COMMANDS.POWER, 10), 'POWER:10');
   assert.equal(buildRfCommand(RF_COMMANDS.ANTENNA, 'main'), 'ANTENNA:main');
+  assert.equal(buildRfCommand(RF_COMMANDS.STOP, 'off'), 'STOP:off');
+});
+
+
+test('stopRf returns explicit stop/off payload with safe fallback command', () => {
+  assert.deepEqual(stopRf(), {
+    commandType: 'STOP',
+    action: 'off',
+    command: 'STOP:off',
+    safeCommand: 'POWER:0',
+  });
 });
 
 test('parseChannelValue accepts valid integer range 0..80', () => {
