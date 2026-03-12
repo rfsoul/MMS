@@ -7,12 +7,15 @@ const {
   setChannel,
   parsePowerValue,
   setPower,
+  parseAntennaValue,
+  setAntenna,
   RF_COMMANDS,
 } = require('./rf-control.service');
 
 test('buildRfCommand uses command abstraction consistently', () => {
   assert.equal(buildRfCommand(RF_COMMANDS.CHANNEL, 42), 'CHANNEL:42');
   assert.equal(buildRfCommand(RF_COMMANDS.POWER, 10), 'POWER:10');
+  assert.equal(buildRfCommand(RF_COMMANDS.ANTENNA, 'main'), 'ANTENNA:main');
 });
 
 test('parseChannelValue accepts valid integer range 0..80', () => {
@@ -98,5 +101,36 @@ test('setPower returns explicit command payload', () => {
     commandType: 'POWER',
     power: 4,
     command: 'POWER:4',
+  });
+});
+
+test('parseAntennaValue accepts supported physical antenna controls', () => {
+  assert.equal(parseAntennaValue('main'), 'main');
+  assert.equal(parseAntennaValue('pogo'), 'pogo');
+  assert.equal(parseAntennaValue('  MAIN  '), 'main');
+});
+
+test('parseAntennaValue rejects missing and unsupported values clearly', () => {
+  assert.throws(() => parseAntennaValue(undefined), {
+    code: 'INVALID_ANTENNA',
+    message: 'Antenna is required and must be one of: main, pogo',
+  });
+
+  assert.throws(() => parseAntennaValue(42), {
+    code: 'INVALID_ANTENNA',
+    message: 'Antenna must be one of: main, pogo',
+  });
+
+  assert.throws(() => parseAntennaValue('aux'), {
+    code: 'INVALID_ANTENNA',
+    message: 'Antenna must be one of: main, pogo',
+  });
+});
+
+test('setAntenna returns explicit command payload', () => {
+  assert.deepEqual(setAntenna('pogo'), {
+    commandType: 'ANTENNA',
+    antenna: 'pogo',
+    command: 'ANTENNA:pogo',
   });
 });
