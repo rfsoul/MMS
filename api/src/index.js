@@ -17,6 +17,7 @@ const tasksRoutes       = require('./routes/work-order-tasks.routes');
 const pmRoutes          = require('./routes/pm-schedules.routes');
 const issuesRoutes      = require('./routes/issues.routes');
 const reportersRoutes   = require('./routes/reporters.routes');
+const rfControlRoutes   = require('./routes/rf-control.routes');
 const { startScheduler } = require('./pm-scheduler');
 const { errorHandler, notFound } = require('./middleware/error.middleware');
 
@@ -72,6 +73,7 @@ app.use('/checklists',                     checklistsRoutes);
 app.use('/pm',                             pmRoutes);
 app.use('/issues',                         issuesRoutes);
 app.use('/reporters',                      reportersRoutes);
+app.use('/rf-control',                     rfControlRoutes);
 
 // ─────────────────────────────────────────
 // Error handling (must be last)
